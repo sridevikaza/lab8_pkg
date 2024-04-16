@@ -4,7 +4,8 @@
 (FILL ME IN)
 
 ## Lane Detection Result Image
-(FILL ME IN)
+
+![Lane Detection Results](lane_detection_result.png)
 
 ## Integrated Object Detection + Distance Calculation Result Image
 (FILL ME IN)
