@@ -19,7 +19,6 @@ foreach(PACKAGE
   geometry_msgs
   sensor_msgs
   std_msgs
-  cv_bridge
   OpenCV
 )
 
