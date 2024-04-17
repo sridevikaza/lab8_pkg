@@ -2,7 +2,6 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 import cv2
 import numpy as np
 import glob
@@ -10,13 +9,12 @@ import glob
 class DistanceNode(Node):
     def __init__(self):
         super().__init__('distance_node')
-
         # load camera calibration matrix
-        self.calibration_matrix, self.dist_coeffs = self.calibrate_camera('/home/moody/f1tenth_ws/src/lab8_pkg/calibration', (.06, .08), .25)
+        chessboard_size = (6, 8)  # Chessboard size (inner corners)
+        square_size = 25  # Size of each square in cm
+        self.calibration_matrix, self.dist_coeffs = self.calibrate_camera('/sim_ws/src/lab8_pkg/calibration', chessboard_size, square_size)
         print("Calibration Matrix: \n", self.calibration_matrix)
 
-        # initialize CvBridge
-        self.bridge = CvBridge()
 
     def calibrate_camera(self, calibration_folder, chessboard_size, square_size):
         # prepare object points
@@ -46,71 +44,52 @@ class DistanceNode(Node):
                 corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
                 imgpoints.append(corners2)
 
-                # draw and display the corners
+                # draw the corners
                 img = cv2.drawChessboardCorners(img, chessboard_size, corners2, ret)
-                cv2.imwrite('/home/moody/f1tenth_ws/src/lab8_pkg/output_image.png', img)
+                cv2.imwrite('/sim_ws/src/lab8_pkg/chessboard_corners.png', img)
 
         # perform camera calibration
         ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
         return mtx, dist
 
 
-    def calculate_camera_height(self, u, v, x_car):
-        """
-        Calculate the camera mounting height.
-        
-        Parameters:
-            u (float): The u-coordinate (horizontal pixel) of the object in the image.
-            v (float): The v-coordinate (vertical pixel) of the object in the image.
-            x_car (float): The distance of the object from the camera along the x-axis in the car frame (in cm).
-        
-        Returns:
-            float: The height of the camera above the car frame in cm.
-        """
+    def calculate_camera_height(self, u, v, X):
 
-        # Convert x_car from cm to the same units used in the calibration (assuming meters here)
-        X = x_car / 100
-        
-        # Invert the intrinsic matrix to transform from pixel coordinates to camera coordinates
-        K_inv = np.linalg.inv(self.calibration_matrix)
-        
-        # Transform image coordinates to normalized camera coordinates
+        # read image and set lower right corner pixel points
+        img = cv2.imread('/sim_ws/src/lab8_pkg/resource/cone_x40cm.png')
+        reference_point = (u, v)
+        cv2.circle(img, reference_point, 5, (0, 255, 0), -1)
+        cv2.imwrite('/sim_ws/src/lab8_pkg/known_cone_image.png', img)
+
+        # calculate camera coords from pixel coords
         pixel_coords = np.array([u, v, 1])
+        K_inv = np.linalg.inv(self.calibration_matrix)
         camera_coords = K_inv @ pixel_coords
+        # print(f"{camera_coords=}")
         
-        # We know X and assume Y = 0, solve for Z (H) using similar triangles:
-        # (X/Z) = (camera_coords[0] / camera_coords[2])
-        Z = X / camera_coords[0] * camera_coords[2]
-        
-        # Convert Z from meters to cm (if your calibration was in meters)
-        return Z * 100  # converting back to cm for consistency with x_car
+        # solve for Z
+        Z = X / camera_coords[0]
+
+        return Z
 
 
-    def calculate_distance_to_cone(self, cone_image):
-        # read the cone image
-        img = cv2.imread(cone_image)
+    def calculate_distance_to_cone(self, u, v):
 
-        # set lower right corner pixel points
-        reference_point = [598, 418]
+        # read the cone image and set lower right corner pixel points
+        img = cv2.imread('/sim_ws/src/lab8_pkg/resource/cone_unknown.png')
+        reference_point = (u, v)
+        cv2.circle(img, reference_point, 5, (0, 255, 0), -1)
+        cv2.imwrite('/sim_ws/src/lab8_pkg/unknown_cone_image.png', img)
 
         # Calculate distance in x_car and y_car coordinates
         x_car = reference_point[0] * (self.mount_height / self.calibration_matrix[0, 0])
         y_car = reference_point[1] * (self.mount_height / self.calibration_matrix[1, 1])
 
-        # Draw reference point for visualization
-        cv2.circle(img, tuple(reference_point), 5, (0, 0, 255), -1)
-
-        # Display visualizations
-        cv2.imwrite('/home/moody/f1tenth_ws/src/lab8_pkg/cone_image.png', img)
-
         return x_car, y_car
-
 
     def main(self):
         # Calibration parameters
-        chessboard_size = (6, 8)  # Chessboard size (inner corners)
-        square_size = 25  # Size of each square in mm
-
+        # hard coding the actual values for now in case we are dumb
         self.calibration_matrix = np.array([[606, 0, 322],
                                             [0, 605, 239],
                                             [0, 0, 1]])
@@ -121,8 +100,7 @@ class DistanceNode(Node):
         print("Camera Mount Height:", self.mount_height, "cm")
 
         # Calculate distance to cone
-        cone_image = '/home/moody/f1tenth_ws/src/lab8_pkg/resource/cone_unknown.png'
-        x_car, y_car = self.calculate_distance_to_cone(cone_image)
+        x_car, y_car = self.calculate_distance_to_cone(598, 418)
 
         if x_car is not None and y_car is not None:
             print("Distance to cone (x_car, y_car):", x_car, "cm,", y_car, "cm")
