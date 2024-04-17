@@ -1,8 +1,10 @@
 # Lab 8: Vision Lab
 
 ## The x, y distance of the unknown cones?
-x: 111.45 cm\
-y: 77.81 cm
+
+x: 34.43136417712022 cm
+
+y: 24.038544064985025 cm
 
 ## Lane Detection Result Image
 ![Lane Detection Results](lane_detection_result.png)

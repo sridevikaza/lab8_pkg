@@ -46,7 +46,7 @@ class CameraCalibrationNode(Node):
                 self.object_points_list.append(self.object_points)
                 self.image_points_list.append(corners)
 
-        if len(self.object_points_list) >= 10:  # Calibrate after collecting sufficient data
+        if len(self.object_points_list) >= 13:  # Calibrate after collecting sufficient data
             ret, camera_matrix, distortion_coeffs, _, _ = cv2.calibrateCamera(
                 self.object_points_list, self.image_points_list, gray.shape[::-1], None, None
             )

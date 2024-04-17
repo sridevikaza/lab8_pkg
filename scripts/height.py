@@ -32,7 +32,6 @@ class CameraCalibrationNode(Node):
         self.calibrate_camera()
 
     def calibrate_camera(self):
-        # Path to your calibration images
         images = glob.glob(self.path + 'lab8_pkg/calibration/*.png')
 
         for fname in images:
@@ -46,7 +45,7 @@ class CameraCalibrationNode(Node):
                 self.object_points_list.append(self.object_points)
                 self.image_points_list.append(corners)
 
-        if len(self.object_points_list) >= 10:  # Calibrate after collecting sufficient data
+        if len(self.object_points_list) >= 13:  # Calibrate after collecting sufficient data
             ret, self.camera_matrix, self.distortion_coeffs, _, _ = cv2.calibrateCamera(
                 self.object_points_list, self.image_points_list, gray.shape[::-1], None, None
             )
@@ -61,7 +60,7 @@ class CameraCalibrationNode(Node):
 
     def calculate_camera_mount_height(self):
         # Pixel coordinates of the point in the image
-        pixel_coordinates = np.array([[665, 499]])  # Reshaped to (1, 2) array
+        pixel_coordinates = np.array([665, 499])  # Reshaped to (1, 2) array
         # Distance from the camera to the object in cm
         distance_to_object = 40
 
@@ -75,15 +74,16 @@ class CameraCalibrationNode(Node):
         distortion_coeffs = self.distortion_coeffs
 
         # Undistort the pixel coordinates
-        undistorted_pixel_coordinates = cv2.undistortPoints(pixel_coordinates.reshape(1, 1, 2),
-                                                            self.camera_matrix, distortion_coeffs)
+        # undistorted_pixel_coordinates = cv2.undistortPoints(pixel_coordinates,
+        #                                                     self.camera_matrix, distortion_coeffs)
 
         # Convert pixel coordinates to normalized image coordinates
-        normalized_image_coordinates = (
-            undistorted_pixel_coordinates.squeeze() - np.array([cx, cy])) / np.array([fx, fy])
+        # normalized_image_coordinates = (
+        #     undistorted_pixel_coordinates.squeeze() - np.array([cx, cy])) / np.array([fx, fy])
 
         # Convert normalized image coordinates to homogeneous coordinates
-        homogeneous_coordinates = np.append(normalized_image_coordinates, 1)
+        # homogeneous_coordinates = np.append(normalized_image_coordinates, 1)
+        homogeneous_coordinates = np.append(pixel_coordinates, 1)
 
         # Use inverse camera matrix to convert to camera frame
         inverse_camera_matrix = np.linalg.inv(self.camera_matrix)
@@ -98,7 +98,7 @@ class CameraCalibrationNode(Node):
 
         self.get_logger().info(
             "Height of the camera mount: {:.2f} cm".format(height_of_camera_mount))
-
+        
 
 def main(args=None):
     rclpy.init(args=args)
