@@ -65,7 +65,6 @@ class DistanceNode(Node):
         pixel_coords = np.array([u, v, 1])
         K_inv = np.linalg.inv(self.calibration_matrix)
         camera_coords = K_inv @ pixel_coords
-        # print(f"{camera_coords=}")
         
         # solve for Z
         Z = X / camera_coords[0]
@@ -88,12 +87,6 @@ class DistanceNode(Node):
         return x_car, y_car
 
     def main(self):
-        # Calibration parameters
-        # hard coding the actual values for now in case we are dumb
-        self.calibration_matrix = np.array([[606, 0, 322],
-                                            [0, 605, 239],
-                                            [0, 0, 1]])
-
         # Calculate mount height
         x_car = 40  # Known x_car distance of the cone in cm
         self.mount_height = self.calculate_camera_height(664, 494, x_car)
