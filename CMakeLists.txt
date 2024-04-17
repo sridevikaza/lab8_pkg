@@ -49,7 +49,7 @@ install(PROGRAMS
   scripts/camera.py
   scripts/lane.py
   scripts/distance.py
-  scripts/distance1.py
+  scripts/distance_ignore_distortion.py
   scripts/calibration.py
   scripts/height.py
   DESTINATION lib/${PROJECT_NAME}
