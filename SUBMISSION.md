@@ -9,15 +9,15 @@ y: -0.1270762728819977 cm
 height: 0.1358251090372977
 
 ## Lane Detection Result Image
-![Lane Detection Results](lane_detection_result.png)
+![Lane Detection Results](submission/lane_detection_result.png)
 
 ## Integrated Object Detection + Distance Calculation Result Image
-(FILL ME IN)
+![Integration Results](submission/yolo_result_0.jpg)
 
 ## Nerual Network Training & Testing Loss Plot
-![YOLO v8 Results](training_plot.png)
+![YOLO v8 Results](submission/training_plot.png)
 
-![YOLO v8 Results](yolov8_result.jpeg)
+![YOLO v8 Results](submission/yolov8_result.jpeg)
 
 ## Is FP16 faster? Why?
 FP16 inference time (ms): (FILL ME IN)

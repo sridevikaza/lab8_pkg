@@ -139,6 +139,16 @@ def click_on_image(image_path):
 
     cv2.destroyAllWindows()
 
+def get_camera_matrix_and_height(images_folder, chessboard_size, square_size):
+    camera_intrinsics = calculate_camera_matrix(
+        images_folder, chessboard_size, square_size)
+
+    pixel = (661, 494)
+    # Calculate camera mounting height
+    camera_mounting_height = calculate_mounting_height(
+        pixel, camera_intrinsics)
+
+    return camera_intrinsics, camera_mounting_height
 
 # Main function
 if __name__ == "__main__":

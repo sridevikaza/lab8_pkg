@@ -48,8 +48,9 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/camera.py
   scripts/lane.py
-  scripts/yolo.py
+  scripts/convert_trt.py
   scripts/distance.py
+  scripts/integrated.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
