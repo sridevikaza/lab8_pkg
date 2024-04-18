@@ -2,9 +2,11 @@
 
 ## The x, y distance of the unknown cones?
 
-x: 34.43136417712022 cm
+x: 0.6091080208284092 cm
 
-y: 24.038544064985025 cm
+y: -0.1270762728819977 cm
+
+height: 0.1358251090372977
 
 ## Lane Detection Result Image
 ![Lane Detection Results](lane_detection_result.png)
@@ -13,7 +15,9 @@ y: 24.038544064985025 cm
 (FILL ME IN)
 
 ## Nerual Network Training & Testing Loss Plot
-(FILL ME IN)
+![YOLO v8 Results](training_plot.png)
+
+![YOLO v8 Results](yolov8_result.jpeg)
 
 ## Is FP16 faster? Why?
 FP16 inference time (ms): (FILL ME IN)

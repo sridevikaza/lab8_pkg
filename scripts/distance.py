@@ -1,112 +1,168 @@
 #!/usr/bin/env python3
-import rclpy
-from rclpy.node import Node
-from sensor_msgs.msg import Image
+
 import cv2
 import numpy as np
 import glob
 
-class DistanceNode(Node):
-    def __init__(self):
-        super().__init__('distance_node')
-        # load camera calibration matrix
-        chessboard_size = (6, 8)  # Chessboard size (inner corners)
-        square_size = 25  # Size of each square in cm
-        self.calibration_matrix, self.dist_coeffs = self.calibrate_camera('/sim_ws/src/lab8_pkg/calibration', chessboard_size, square_size)
-        print("Calibration Matrix: \n", self.calibration_matrix)
+# Global variables to store clicked coordinates
+clicked_x = -1
+clicked_y = -1
+clicked = False
+
+# Mouse callback function
+def mouse_callback(event, x, y, flags, param):
+    global clicked_x, clicked_y, clicked
+    if event == cv2.EVENT_LBUTTONDOWN:
+        clicked_x = x
+        clicked_y = y
+        clicked = True
+        print("Clicked at:", x, y)
 
 
-    def calibrate_camera(self, calibration_folder, chessboard_size, square_size):
-        # prepare object points
-        objp = np.zeros((chessboard_size[0] * chessboard_size[1], 3), np.float32)
-        objp[:, :2] = np.mgrid[0:chessboard_size[0], 0:chessboard_size[1]].T.reshape(-1, 2) * square_size
+# Function to calculate camera intrinsic matrix
+def calculate_camera_matrix(images_folder, chessboard_size, square_size):
+    objp = np.zeros((chessboard_size[0] * chessboard_size[1], 3), np.float32)
+    objp[:, :2] = np.mgrid[0:chessboard_size[0],
+                           0:chessboard_size[1]].T.reshape(-1, 2) * square_size
 
-        # arrays to store object points and image points from all the images
-        objpoints = []  # 3D points in real world space
-        imgpoints = []  # 2D points in image plane
+    objpoints = []  # 3d point in real world space
+    imgpoints = []  # 2d points in image plane.
 
-        # get the list of calibration images
-        calibration_images = glob.glob(calibration_folder + '/*.png')
+    images = glob.glob(images_folder + '/*.png')
 
-        # loop through calibration images
-        for image_path in calibration_images:
-            # read each image
-            img = cv2.imread(image_path)
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    for fname in images:
+        img = cv2.imread(fname)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        ret, corners = cv2.findChessboardCorners(gray, chessboard_size, None)
 
-            # find chessboard corners
-            ret, corners = cv2.findChessboardCorners(gray, chessboard_size, None)
+        if ret:
+            objpoints.append(objp)
+            imgpoints.append(corners)
 
-            # add object points and image points (after refining them)
-            if ret:
-                objpoints.append(objp)
-                criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001)
-                corners2 = cv2.cornerSubPix(gray, corners, (11, 11), (-1, -1), criteria)
-                imgpoints.append(corners2)
-
-                # draw the corners
-                img = cv2.drawChessboardCorners(img, chessboard_size, corners2, ret)
-                cv2.imwrite('/sim_ws/src/lab8_pkg/chessboard_corners.png', img)
-
-        # perform camera calibration
-        ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
-        return mtx, dist
+    ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(
+        objpoints, imgpoints, gray.shape[::-1], None, None)
+    print("Camera intrinsic matrix:\n", mtx)
+    return mtx
 
 
-    def calculate_camera_height(self, u, v, X):
+def pixel_to_camera_coordinates(pixel_coords, camera_intrinsics):
 
-        # read image and set lower right corner pixel points
-        img = cv2.imread('/sim_ws/src/lab8_pkg/resource/cone_x40cm.png')
-        reference_point = (u, v)
-        cv2.circle(img, reference_point, 5, (0, 255, 0), -1)
-        cv2.imwrite('/sim_ws/src/lab8_pkg/known_cone_image.png', img)
+    # Convert pixel coordinates to homogeneous coordinates
+    pixel_homogeneous = np.array([pixel_coords[0], pixel_coords[1], 1])
 
-        # calculate camera coords from pixel coords
-        pixel_coords = np.array([u, v, 1])
-        K_inv = np.linalg.inv(self.calibration_matrix)
-        camera_coords = K_inv @ pixel_coords
-        
-        # solve for Z
-        Z = X / camera_coords[0]
+    # Get the inverse of the camera intrinsic matrix
+    inv_intrinsics = np.linalg.inv(camera_intrinsics)
 
-        return Z
+    # Apply inverse intrinsic matrix to pixel coordinates
+    camera_coords_homogeneous = inv_intrinsics @ pixel_homogeneous
+
+    return camera_coords_homogeneous
 
 
-    def calculate_distance_to_cone(self, u, v):
+def camera_to_car_coordinates(camera_coords, car_coords):
+    # Rotate camera coordinates
+    R = np.array([[0, -1, 0],
+                  [0, 0, -1],
+                  [1, 0, 0]])
+    rotated_coords = R @ car_coords
 
-        # read the cone image and set lower right corner pixel points
-        img = cv2.imread('/sim_ws/src/lab8_pkg/resource/cone_unknown.png')
-        reference_point = (u, v)
-        cv2.circle(img, reference_point, 5, (0, 255, 0), -1)
-        cv2.imwrite('/sim_ws/src/lab8_pkg/unknown_cone_image.png', img)
+    # Calculate translation factor
+    translation_factor = rotated_coords[2]
 
-        # Calculate distance in x_car and y_car coordinates
-        x_car = reference_point[0] * (self.mount_height / self.calibration_matrix[0, 0])
-        y_car = reference_point[1] * (self.mount_height / self.calibration_matrix[1, 1])
+    # Translate to car coordinates
+    translated_coords = camera_coords - rotated_coords / translation_factor
+    translated_coords = translated_coords * translation_factor
 
-        return x_car, y_car
+    # Extract height
+    height = translated_coords[1]
 
-    def main(self):
-        # Calculate mount height
-        x_car = 40  # Known x_car distance of the cone in cm
-        self.mount_height = self.calculate_camera_height(664, 494, x_car)
-        print("Camera Mount Height:", self.mount_height, "cm")
+    return height
 
-        # Calculate distance to cone
-        x_car, y_car = self.calculate_distance_to_cone(598, 418)
+# Function to calculate camera mounting height
+def calculate_mounting_height(pixel, camera_intrinsics):
+    # Convert pixel coordinates to camera coordinates
+    camera_coords = pixel_to_camera_coordinates(pixel, camera_intrinsics)
 
-        if x_car is not None and y_car is not None:
-            print("Distance to cone (x_car, y_car):", x_car, "cm,", y_car, "cm")
-        else:
-            print("Error: Distance calculation failed.")
+    # Convert camera coordinates to car coordinates and get height
+    height = camera_to_car_coordinates(camera_coords, [0.4, 0, 0])
+
+    print("Height of camera:", height)
+
+    return height
+
+# Function to get distance from camera to point in car frame
+def get_distance_to_cone(cone_pixel_coords, intrinsic_matrix, camera_height):
+    # Extract pixel coordinates of the cone
+    pixel_u, pixel_v = cone_pixel_coords
+
+    # Convert pixel coordinates to camera coordinates
+    camera_coords_homogeneous = np.linalg.inv(
+        intrinsic_matrix) @ np.array([pixel_u, pixel_v, 1])
+
+    # Rotation matrix to convert camera coordinates to car coordinates
+    rotation_matrix = np.array([[0, -1, 0],
+                                [0, 0, -1],
+                                [1, 0, 0]])
+
+    # Translation vector representing the camera's position relative to the car
+    translation_vector = np.array([0, camera_height, 0])
+
+    # Calculate the scaling factor to convert camera coordinates to car coordinates
+    scaling_factor = camera_height / camera_coords_homogeneous[1]
+
+    # Transform camera coordinates to car coordinates
+    car_coords_homogeneous = np.linalg.inv(
+        rotation_matrix) @ (scaling_factor * camera_coords_homogeneous - translation_vector)
+
+    # Extract x and y coordinates in the car frame
+    x_car, y_car = car_coords_homogeneous[0], car_coords_homogeneous[1]
+
+    return x_car, y_car
 
 
-def main(args=None):
-    rclpy.init(args=args)
-    distance_node = DistanceNode()
-    distance_node.main()
-    rclpy.spin(distance_node)
-    rclpy.shutdown()
+def click_on_image(image_path):
+    # Load the image
+    image = cv2.imread(image_path)
 
-if __name__ == '__main__':
-    main()
+    # Create a window and set mouse callback
+    cv2.namedWindow('image')
+    cv2.setMouseCallback('image', mouse_callback)
+
+    while True:
+        # Display the image
+        cv2.imshow('image', image)
+
+        # Check for key press
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+
+    cv2.destroyAllWindows()
+
+
+# Main function
+if __name__ == "__main__":
+    images_folder = '/root/sim_ws/src/lab8_pkg/calibration'
+    chessboard_size = (6, 8)
+    square_size = 0.25  # 25cm
+    camera_intrinsics = calculate_camera_matrix(
+        images_folder, chessboard_size, square_size)
+
+    cone_x = 0.4  # 40cm
+
+    # click_on_image(image_path = './resource/cone_x40cm.png')
+    # pixel = (clicked_x, clicked_y)
+    pixel = (661, 494)
+    # Calculate camera mounting height
+    camera_mounting_height = calculate_mounting_height(
+        pixel, camera_intrinsics)
+    print("Camera mounting height:", camera_mounting_height, "meters")
+
+    # click_on_image(image_path='./resource/cone_unknown.png')
+    # pixel = [clicked_x, clicked_y]
+    pixel = [593, 413]
+
+    x_car, y_car = get_distance_to_cone(
+        pixel, camera_intrinsics, camera_mounting_height)
+    print("Distance to cone in x_car:", x_car)
+    print("Distance to cone in y_car:", y_car)

@@ -48,10 +48,8 @@ ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   scripts/camera.py
   scripts/lane.py
+  scripts/yolo.py
   scripts/distance.py
-  scripts/distance_ignore_distortion.py
-  scripts/calibration.py
-  scripts/height.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
