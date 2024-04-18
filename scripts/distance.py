@@ -158,8 +158,6 @@ if __name__ == "__main__":
     camera_intrinsics = calculate_camera_matrix(
         images_folder, chessboard_size, square_size)
 
-    cone_x = 0.4  # 40cm
-
     # click_on_image(image_path = './resource/cone_x40cm.png')
     # pixel = (clicked_x, clicked_y)
     pixel = (661, 494)

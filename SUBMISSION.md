@@ -6,13 +6,20 @@ x: 0.6091080208284092 cm
 
 y: -0.1270762728819977 cm
 
-height: 0.1358251090372977
+height: 0.1358251090372977cm
 
 ## Lane Detection Result Image
 ![Lane Detection Results](submission/lane_detection_result.png)
 
 ## Integrated Object Detection + Distance Calculation Result Image
-![Integration Results](submission/yolo_result_0.jpg)
+![Integration Results](submission/yolo_result_distance.jpg)
+
+Distance to car: 
+
+x:  1.0265792297525804 m
+
+y:  -0.11650568259891672 m
+
 
 ## Nerual Network Training & Testing Loss Plot
 ![YOLO v8 Results](submission/training_plot.png)
@@ -20,6 +27,12 @@ height: 0.1358251090372977
 ![YOLO v8 Results](submission/yolov8_result.jpeg)
 
 ## Is FP16 faster? Why?
+
+
+### COULD NOT INSTALL TENORRT on JETSON NANO
+
+#### But we have written the convert_trt.py & tested it
+
 FP16 inference time (ms): (FILL ME IN)
 
 FP32 inference time (ms): (FILL ME IN)
