@@ -22,9 +22,14 @@ y:  -0.11650568259891672 m
 
 
 ## Nerual Network Training & Testing Loss Plot
+
+
 ![YOLO v8 Results](submission/training_plot.png)
 
 ![YOLO v8 Results](submission/yolov8_result.jpeg)
+
+Yolov8 Trained by jiyoonp
+
 
 ## Is FP16 faster? Why?
 
